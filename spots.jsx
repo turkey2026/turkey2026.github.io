@@ -1,4 +1,4 @@
-﻿// Spots / Restaurants curated tab + Packing + Flights
+// Spots / Restaurants curated tab + Packing + Flights
 
 const { useState: useStateS, useEffect: useEffectS } = React;
 
@@ -6,9 +6,35 @@ function Spots({ initialFilter }) {
   const [city, setCity] = useStateS(initialFilter?.city || 'All');
   const [cat, setCat] = useStateS(initialFilter?.category || 'All');
   const [active, setActive] = useStateS(null);
-  const cities = ['All', ...new Set(window.SPOTS.map(s => s.city))];
-  const cats = ['All', ...new Set(window.SPOTS.map(s => s.category))];
-  let filtered = window.SPOTS;
+  const [customSpots, setCustomSpots] = useStateS([]);
+
+  useEffectS(() => {
+    if (window.db) {
+      const ref = window.db.ref('turkey26/custom_spots');
+      ref.on('value', snap => {
+        const val = snap.val();
+        setCustomSpots(val ? Object.entries(val).map(([_key, s]) => ({ ...s, _key, _custom: true })) : []);
+      });
+      return () => ref.off();
+    } else {
+      try { setCustomSpots(JSON.parse(localStorage.getItem('turkey26_custom_spots') || '[]')); } catch {}
+    }
+  }, []);
+
+  const addCustomSpot = (spot) => {
+    if (window.db) {
+      window.db.ref('turkey26/custom_spots').push(spot);
+    } else {
+      const updated = [...customSpots, { ...spot, _key: Date.now().toString(), _custom: true }];
+      setCustomSpots(updated);
+      localStorage.setItem('turkey26_custom_spots', JSON.stringify(updated));
+    }
+  };
+
+  const allSpots = [...window.SPOTS, ...customSpots];
+  const cities = ['All', ...new Set(allSpots.map(s => s.city))];
+  const cats = ['All', ...new Set(allSpots.map(s => s.category))];
+  let filtered = allSpots;
   if (city !== 'All') filtered = filtered.filter(s => s.city === city);
   if (cat !== 'All') filtered = filtered.filter(s => s.category === cat);
 
@@ -22,14 +48,22 @@ function Spots({ initialFilter }) {
             <FilterGroup label="City" value={city} options={cities} onChange={setCity} />
             <FilterGroup label="Category" value={cat} options={cats} onChange={setCat} />
             <div style={{ marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-mute)' }}>
-              {filtered.length} of {window.SPOTS.length}
+              {filtered.length} of {allSpots.length}
             </div>
           </div>
 
-          {/* Grouped magazine layout */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 0, borderTop: '1px solid var(--rule)', borderLeft: '1px solid var(--rule)' }}>
+          {/* Map — above tiles */}
+          <div id="spots-atlas">
+            <window.SpotsMap spots={filtered} activeName={active} onActivate={setActive} />
+          </div>
+
+          {/* Add a spot */}
+          <AddSpotForm onAdd={addCustomSpot} />
+
+          {/* Spot tiles grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 0, borderTop: '1px solid var(--rule)', borderLeft: '1px solid var(--rule)', marginTop: 40 }}>
             {filtered.map((s, i) => (
-              <div key={i} className="spot-tile" onClick={() => setActive(s.name)} style={{
+              <div key={s._key || s.name || i} className="spot-tile" onClick={() => setActive(s.name)} style={{
                 padding: '24px 22px',
                 borderRight: '1px solid var(--rule)',
                 borderBottom: '1px solid var(--rule)',
@@ -47,22 +81,20 @@ function Spots({ initialFilter }) {
                     <span style={{ color: categoryColor(s.category), fontSize: 12 }}>{categoryGlyph(s.category)}</span>
                     <span>{s.city} · {s.category}</span>
                   </span>
-                  <span style={{ color: priorityColor2(s.priority) }}>{priorityDot(s.priority)}</span>
+                  <span style={{ color: s._custom ? 'var(--sea)' : priorityColor2(s.priority) }}>
+                    {s._custom ? '+ Added' : priorityDot(s.priority)}
+                  </span>
                 </div>
                 <div className="display" style={{ fontSize: 24, lineHeight: 1.15, marginBottom: 10 }}>{s.name}</div>
                 <div style={{ fontSize: 13.5, color: 'var(--ink-mute)', lineHeight: 1.55 }}>{s.desc}</div>
                 <div style={{ position: 'absolute', bottom: 18, right: 22, display: 'flex', gap: 14, alignItems: 'center' }}>
-                  <button onClick={(e) => { e.stopPropagation(); setActive(s.name); document.getElementById('spots-atlas')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
+                  <button onClick={(e) => { e.stopPropagation(); setActive(s.name); document.getElementById('spots-atlas')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }}
                     style={{ fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--ink-soft)', textDecoration: 'underline', textUnderlineOffset: 4 }}
-                    title="Show on map">map ↓</button>
-                  <a href={s.maps} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ fontFamily: 'var(--serif)', fontSize: 22, color: 'var(--terra)', fontStyle: 'italic' }}>↗</a>
+                    title="Show on map">map ↑</button>
+                  {s.maps && <a href={s.maps} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ fontFamily: 'var(--serif)', fontSize: 22, color: 'var(--terra)', fontStyle: 'italic' }}>↗</a>}
                 </div>
               </div>
             ))}
-          </div>
-
-          <div id="spots-atlas">
-            <window.SpotsMap spots={filtered} activeName={active} onActivate={setActive} />
           </div>
         </div>
       </section>
@@ -71,6 +103,93 @@ function Spots({ initialFilter }) {
         .spot-tile:hover { background: var(--paper-warm) !important; }
       `}</style>
     </div>
+  );
+}
+
+function AddSpotForm({ onAdd }) {
+  const blank = { name: '', city: 'Bodrum', category: 'Food', desc: '', maps: '' };
+  const [isOpen, setIsOpen] = useStateS(false);
+  const [form, setForm] = useStateS(blank);
+  const [flash, setFlash] = useStateS(false);
+
+  const submit = (e) => {
+    e.preventDefault();
+    if (!form.name) return;
+    onAdd({ ...form, priority: 'med' });
+    setForm(blank);
+    setFlash(true);
+    setTimeout(() => { setFlash(false); setIsOpen(false); }, 1200);
+  };
+
+  if (!isOpen) {
+    return (
+      <div style={{ marginTop: 32 }}>
+        <button onClick={() => setIsOpen(true)} style={{
+          width: '100%',
+          padding: '18px',
+          border: '1px dashed var(--rule)',
+          background: 'transparent',
+          fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase',
+          color: 'var(--ink-mute)',
+          transition: 'border-color 200ms, color 200ms',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--terra)'; e.currentTarget.style.color = 'var(--terra)'; }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--rule)'; e.currentTarget.style.color = 'var(--ink-mute)'; }}>
+          + Suggest a spot
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} style={{
+      marginTop: 32,
+      background: flash ? 'oklch(95% 0.06 145)' : 'var(--cream)',
+      border: '1px solid var(--rule)',
+      padding: 24,
+      display: 'grid',
+      gap: 14,
+      transition: 'background 320ms',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <div className="display" style={{ fontSize: 22 }}><em>Suggest</em> a spot</div>
+        <button type="button" onClick={() => { setForm(blank); setIsOpen(false); }} style={{ color: 'var(--ink-mute)', fontSize: 22 }}>×</button>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }} className="iax-row">
+        <div style={{ gridColumn: '1 / -1' }}>
+          <span className="label">Name</span>
+          <input className="input" value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="e.g. Macakizi Beach Club" required />
+        </div>
+        <div>
+          <span className="label">City</span>
+          <select className="select" value={form.city} onChange={e => setForm({...form, city: e.target.value})}>
+            <option>Bodrum</option>
+            <option>Istanbul</option>
+          </select>
+        </div>
+        <div>
+          <span className="label">Category</span>
+          <select className="select" value={form.category} onChange={e => setForm({...form, category: e.target.value})}>
+            {['Food','Bar','Beach Club','Sight','Activity','Shop','Neighborhood'].map(c => <option key={c}>{c}</option>)}
+          </select>
+        </div>
+        <div style={{ gridColumn: '1 / -1' }}>
+          <span className="label">Description</span>
+          <input className="input" value={form.desc} onChange={e => setForm({...form, desc: e.target.value})} placeholder="What makes it worth going?" />
+        </div>
+        <div style={{ gridColumn: '1 / -1' }}>
+          <span className="label">Google Maps link (optional)</span>
+          <input className="input" value={form.maps} onChange={e => setForm({...form, maps: e.target.value})} placeholder="https://maps.google.com/..." />
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', alignItems: 'center' }}>
+        {flash && <span style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', color: 'oklch(45% 0.12 145)' }}>Added ✓</span>}
+        <button type="button" className="btn" onClick={() => { setForm(blank); setIsOpen(false); }}>Cancel</button>
+        <button type="submit" className="btn solid" disabled={!form.name}>Add spot</button>
+      </div>
+    </form>
   );
 }
 

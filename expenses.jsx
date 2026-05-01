@@ -75,7 +75,10 @@ function Expenses() {
         <div className="container">
           <SectionHeader num="V" title="The split tab" lead="Who paid for what. Who owes who. Updated as you go." />
 
-          <div className="expense-stats" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 48 }}>
+          {/* Inline add expense — at the top */}
+          <InlineAddExpense onAdd={addItem} />
+
+          <div className="expense-stats" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 48, marginTop: 48 }}>
             <Stat label="Spent so far" value={fmt(total, currency)} sub={`${items.length} transactions`} />
             <Stat label="Per person" value={fmt(total / window.TRIP.crew.length, currency)} sub="6 travelers, even split" />
             <Stat label="Currency" value={currency} sub={
@@ -133,11 +136,8 @@ function Expenses() {
             )}
           </div>
 
-          {/* Inline add expense */}
-          <InlineAddExpense onAdd={addItem} />
-
           {/* Transactions */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, marginTop: 56 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, marginTop: 0 }}>
             <div className="eyebrow">Transactions ({items.length})</div>
           </div>
 

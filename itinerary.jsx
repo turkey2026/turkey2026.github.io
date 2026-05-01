@@ -22,15 +22,17 @@ function Itinerary() {
             overflow: 'hidden',
           }}>
             {days.map((d, i) => (
-              <div key={d.day} className="timeline-cell" style={{
+              <div key={d.day} className="timeline-cell" onClick={() => setOpenDay(d)} style={{
                 flex: 1,
                 padding: '14px 8px',
                 borderLeft: i === 0 ? 'none' : '1px solid var(--rule)',
                 textAlign: 'center',
                 background: i < 5 ? 'oklch(94% 0.04 60)' : 'oklch(93% 0.03 220)',
+                cursor: 'pointer',
+                transition: 'background 180ms',
               }}>
                 <div className="eyebrow" style={{ fontSize: 9 }}>{d.label}</div>
-                <div style={{ fontFamily: 'var(--serif)', fontSize: 16, fontStyle: 'italic', marginTop: 4 }}>{d.arc}</div>
+                <div className="timeline-arc" style={{ fontFamily: 'var(--serif)', fontSize: 16, fontStyle: 'italic', marginTop: 4 }}>{d.arc}</div>
               </div>
             ))}
           </div>
@@ -207,6 +209,23 @@ function Block({ block, onLink }) {
       </div>
     </div>
   );
+}
+
+const _itineraryStyles = `
+  .timeline-cell:hover { filter: brightness(0.95); }
+  @media (max-width: 820px) {
+    .timeline-arc { font-size: 11px !important; line-height: 1.3; word-break: break-word; }
+    .timeline-cell { padding: 10px 6px !important; }
+  }
+  @media (max-width: 820px) {
+    .block-link:hover { background: var(--paper-warm); }
+  }
+`;
+if (!document.getElementById('itinerary-styles')) {
+  const s = document.createElement('style');
+  s.id = 'itinerary-styles';
+  s.textContent = _itineraryStyles;
+  document.head.appendChild(s);
 }
 
 window.Itinerary = Itinerary;

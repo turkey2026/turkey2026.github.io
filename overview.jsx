@@ -27,8 +27,6 @@ function useDecisions() {
 function Overview({ onNav }) {
   const photos = window.PHOTOS;
   const [decisions, toggleDecision] = useDecisions();
-  const decided = decisions.filter(d => d.status === 'decided').length;
-  const open = decisions.filter(d => d.status === 'open').length;
 
   return (
     <div className="page">
@@ -51,28 +49,6 @@ function Overview({ onNav }) {
               <CityCard photo={photos.istanbul1} city="Istanbul" sub="Bosphorus · 5 nights" notes="Hagia Sophia, Bosphorus cruise, Mikla rooftop" onClick={() => onNav('itinerary')} />
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* Stats / metadata bar */}
-      <section style={{ borderTop: '1px solid var(--rule)', borderBottom: '1px solid var(--rule)', background: 'var(--paper-warm)' }}>
-        <div className="container ov-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 0 }}>
-          {[
-            { k: '9', l: 'Days' },
-            { k: '6', l: 'Travelers' },
-            { k: '2', l: 'Cities' },
-            { k: '4', l: 'Flights' },
-            { k: `${decided}/${decided + open}`, l: 'Decisions made' },
-          ].map((x, i) => (
-            <div key={i} style={{
-              padding: '36px 24px',
-              borderLeft: i === 0 ? 'none' : '1px solid var(--rule)',
-              textAlign: 'center',
-            }}>
-              <div className="display" style={{ fontSize: 'clamp(40px, 4vw, 56px)', fontStyle: 'italic' }}>{x.k}</div>
-              <div className="eyebrow" style={{ marginTop: 8 }}>{x.l}</div>
-            </div>
-          ))}
         </div>
       </section>
 
