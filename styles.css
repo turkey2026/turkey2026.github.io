@@ -382,7 +382,7 @@ a { color: inherit; text-decoration: none; cursor: none; }
 /* ── Hero ── */
 @media (max-width: 640px) {
   .hero-content-grid { grid-template-columns: 1fr !important; gap: 20px !important; }
-  .hero-countdown { display: none !important; }
+  .hero-countdown { display: flex !important; flex-wrap: wrap; gap: 16px !important; padding: 14px 18px !important; }
 }
 
 /* ── Overview intro ── */
