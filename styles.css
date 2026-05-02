@@ -430,6 +430,7 @@ a { color: inherit; text-decoration: none; cursor: none; }
   .lodging-article { grid-template-columns: 1fr !important; gap: 24px !important; }
   .lodging-article .photo { order: 1 !important; aspect-ratio: 16/9 !important; }
   .lodging-article .lodging-text { order: 2 !important; }
+  .lodging-compare-grid { grid-template-columns: 1fr !important; }
 }
 
 /* ── Expenses balances ── */
